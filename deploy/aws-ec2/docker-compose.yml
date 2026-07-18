@@ -1,0 +1,46 @@
+# EC2 production stack: pulls the app image from ECR and runs it alongside Postgres,
+# Redis, and a Cloudflare tunnel (free public HTTPS). All containers restart on boot.
+# No inbound HTTP port is needed — cloudflared connects OUTBOUND to Cloudflare.
+name: urlshort
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: urlshort
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-urlshort}
+      POSTGRES_DB: urlshort
+    volumes:
+      - pgdata:/var/lib/postgresql # persists data across restarts
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U urlshort"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  app:
+    image: ${APP_IMAGE:-197002356271.dkr.ecr.us-east-1.amazonaws.com/url-shortener:latest}
+    command: sh -c "npx prisma migrate deploy && node dist/index.js"
+    environment:
+      PORT: "3000"
+      DATABASE_URL: "postgresql://urlshort:${POSTGRES_PASSWORD:-urlshort}@postgres:5432/urlshort?schema=public"
+      REDIS_URL: "redis://redis:6379"
+      BASE_URL: "${BASE_URL:-http://localhost:3000}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate --url http://app:3000
+    depends_on:
+      - app
+    restart: unless-stopped
+
+volumes:
+  pgdata:

@@ -1,0 +1,25 @@
+// Physical schema from 03_LLD/02_data_model_schema.md (SQL/Postgres version).
+// short_code is the PRIMARY KEY -> O(1) lookups + free custom-alias uniqueness
+// (a duplicate alias insert fails the PK constraint -> we return 409 Conflict).
+
+generator client {
+  provider = "prisma-client-js"
+  // "native" = your dev machine; the musl/OpenSSL-3 target is for the
+  // node:*-alpine container the app runs in on Kubernetes.
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Url {
+  shortCode  String    @id @map("short_code") @db.VarChar(10)
+  longUrl    String    @map("long_url")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  expiresAt  DateTime? @map("expires_at")
+  clickCount Int       @default(0) @map("click_count")
+
+  @@map("urls")
+}
