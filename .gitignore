@@ -2,3 +2,4 @@ node_modules/
 dist/
 .env
 *.log
+deploy/aws-ec2/*.pem
