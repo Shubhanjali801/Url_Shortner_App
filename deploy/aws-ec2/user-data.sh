@@ -5,7 +5,7 @@
 # Requires: an IAM instance role with AmazonEC2ContainerRegistryReadOnly.
 set -euxo pipefail
 
-REGION="us-east-1"
+REGION="ap-south-1"
 ACCOUNT="197002356271"
 APP_DIR="/opt/urlshort"
 
@@ -41,7 +41,7 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
   app:
-    image: 197002356271.dkr.ecr.us-east-1.amazonaws.com/url-shortener:latest
+    image: 197002356271.dkr.ecr.ap-south-1.amazonaws.com/url-shortener:latest
     command: sh -c "npx prisma migrate deploy && node dist/index.js"
     environment:
       PORT: "3000"
