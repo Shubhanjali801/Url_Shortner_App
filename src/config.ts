@@ -8,9 +8,20 @@ function num(name: string, fallback: number): number {
   return n;
 }
 
+// Public base URL used to build returned short links.
+// Priority: explicit BASE_URL > Railway's injected public domain > localhost.
+// The Railway fallback means short links are correct on the very first deploy,
+// without having to know the generated domain in advance.
+function resolveBaseUrl(): string {
+  if (process.env.BASE_URL) return process.env.BASE_URL;
+  const railway = process.env.RAILWAY_PUBLIC_DOMAIN;
+  if (railway) return `https://${railway}`;
+  return "http://localhost:3000";
+}
+
 export const config = {
   port: num("PORT", 3000),
-  baseUrl: process.env.BASE_URL ?? "http://localhost:3000",
+  baseUrl: resolveBaseUrl(),
   redisUrl: process.env.REDIS_URL, // optional — caching is skipped if unset/unreachable
   codeLength: num("CODE_LENGTH", 7),
   cacheTtlSeconds: num("CACHE_TTL_SECONDS", 3600),
