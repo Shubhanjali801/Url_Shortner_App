@@ -11,9 +11,9 @@ caching, and rate limiting — behind a clean REST API and a polished landing pa
 ![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
 ![AWS](https://img.shields.io/badge/AWS-EC2%20%C2%B7%20ECR-FF9900?logo=amazonaws&logoColor=white)
+![Railway](https://img.shields.io/badge/Railway-deployed-0B0D0E?logo=railway&logoColor=white)
 
-> **Live demo:** deployed on **AWS EC2** (ap-south-1) behind a Cloudflare tunnel with
-> free HTTPS. The demo URL rotates on each redeploy — see [Deployment](#deployment).
+> ### 🔗 Live demo — **https://urlshortnerapp-production-dd24.up.railway.app**
 
 ---
 
@@ -119,13 +119,27 @@ npm test
 
 ## Deployment
 
-Runs as a single self-contained stack — **app + Postgres + Redis + a Cloudflare
-tunnel** (free public HTTPS, no domain needed) — on one always-on AWS EC2 instance.
-The image is built locally, pushed to **Amazon ECR**, and pulled on the instance; a
-boot script (`user-data.sh`) brings the whole stack up automatically.
+**Live on [Railway](https://railway.app)** — the app builds from the `Dockerfile` and
+runs alongside managed **Postgres** and **Redis** plugins with a stable HTTPS domain.
+Every `git push` triggers an automatic redeploy (`railway.json` sets the Dockerfile
+build + `/health` check). `BASE_URL` auto-derives from `RAILWAY_PUBLIC_DOMAIN`, and
+Prisma migrations run on container start — so a fresh deploy is fully self-bootstrapping.
+
+Wire the app service's variables to the database plugins:
+
+```
+DATABASE_URL = ${{Postgres.DATABASE_URL}}
+REDIS_URL    = ${{Redis.REDIS_URL}}
+```
+
+<details>
+<summary><b>Alternative — self-hosted on AWS EC2</b> (same stack, more control)</summary>
+
+Runs the identical stack (app + Postgres + Redis + a Cloudflare tunnel for free HTTPS)
+on one always-on EC2 instance. The image is built locally, pushed to **Amazon ECR**, and
+pulled on the instance; a boot script (`user-data.sh`) brings the whole stack up.
 
 ```bash
-# build & push
 docker build -t urlshort-app:latest .
 aws ecr get-login-password --region ap-south-1 | docker login --username AWS \
   --password-stdin <account>.dkr.ecr.ap-south-1.amazonaws.com
@@ -133,11 +147,13 @@ docker tag urlshort-app:latest <account>.dkr.ecr.ap-south-1.amazonaws.com/url-sh
 docker push <account>.dkr.ecr.ap-south-1.amazonaws.com/url-shortener:latest
 ```
 
-Full runbook — launch, relaunch (`relaunch.ps1`), redeploy, and teardown — lives in
+Full runbook (launch, `relaunch.ps1`, redeploy, teardown) is in
 [`deploy/aws-ec2/README.md`](deploy/aws-ec2/README.md).
 
-> ⚠️ **Security:** never commit the SSH private key. Add `deploy/aws-ec2/*.pem` to
-> `.gitignore` before pushing this repo anywhere public.
+> ⚠️ **Security:** never commit the SSH private key — `deploy/aws-ec2/*.pem` is already
+> in `.gitignore`.
+
+</details>
 
 ## Design decisions
 
